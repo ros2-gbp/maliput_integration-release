@@ -1,0 +1,33 @@
+repositories:
+  ament_cmake_doxygen:
+    type: git
+    url: https://github.com/ToyotaResearchInstitute/ament_cmake_doxygen
+    version: main
+  maliput:
+    type: git
+    url: https://github.com/maliput/maliput
+    version: main
+  maliput_drake:
+    type: git
+    url: https://github.com/maliput/maliput_drake
+    version: main
+  maliput_dragway:
+    type: git
+    url: https://github.com/maliput/maliput_dragway
+    version: main
+  maliput_malidrive:
+    type: git
+    url: https://github.com/maliput/maliput_malidrive
+    version: main
+  maliput_multilane:
+    type: git
+    url: https://github.com/maliput/maliput_multilane
+    version: main
+  maliput_object:
+    type: git
+    url: https://github.com/maliput/maliput_object
+    version: main
+  maliput_py:
+    type: git
+    url: https://github.com/maliput/maliput_py
+    version: main
