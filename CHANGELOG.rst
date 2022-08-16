@@ -2,6 +2,11 @@
 Changelog for package maliput_integration
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.2 (2022-08-16)
+------------------
+* Matches with BoundingRegion moving to maliput. (`#122 <https://github.com/maliput/maliput_integration/issues/122>`_)
+* Contributors: Franco Cipollone
+
 0.1.1 (2022-07-29)
 ------------------
 * Matches change in create_road_network binding. (`#120 <https://github.com/maliput/maliput_integration/issues/120>`_)
