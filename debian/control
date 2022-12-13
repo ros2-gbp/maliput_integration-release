@@ -1,0 +1,12 @@
+Source: ros-foxy-maliput-integration
+Section: misc
+Priority: optional
+Maintainer: Daniel Stonier <daniel.stonier@tri.global>
+Build-Depends: debhelper (>= 9.0.0), libgflags-dev, libyaml-cpp-dev, ros-foxy-ament-cmake, ros-foxy-ament-cmake-clang-format <!nocheck>, ros-foxy-ament-cmake-flake8 <!nocheck>, ros-foxy-ament-cmake-gtest <!nocheck>, ros-foxy-ament-cmake-pytest <!nocheck>, ros-foxy-maliput, ros-foxy-maliput-dragway, ros-foxy-maliput-malidrive, ros-foxy-maliput-multilane, ros-foxy-maliput-object, ros-foxy-maliput-osm, ros-foxy-maliput-py, ros-foxy-maliput-sparse, ros-foxy-ros-workspace
+Homepage: 
+Standards-Version: 3.9.2
+
+Package: ros-foxy-maliput-integration
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libgflags-dev, libyaml-cpp-dev, ros-foxy-maliput, ros-foxy-maliput-dragway, ros-foxy-maliput-malidrive, ros-foxy-maliput-multilane, ros-foxy-maliput-object, ros-foxy-maliput-osm, ros-foxy-maliput-py, ros-foxy-maliput-sparse, ros-foxy-ros-workspace
+Description: Maliput Integration.
