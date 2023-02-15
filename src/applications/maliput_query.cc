@@ -59,6 +59,8 @@
 #include <maliput/common/maliput_abort.h>
 #include <maliput/math/bounding_box.h>
 #include <maliput/math/overlapping_type.h>
+#include <maliput/plugin/create_road_network.h>
+#include <maliput/plugin/maliput_plugin_manager.h>
 #include <maliput_malidrive/constants.h>
 #include <maliput_malidrive/utility/file_tools.h>
 #include <maliput_object/api/object.h>
@@ -75,12 +77,36 @@ MALIDRIVE_PROPERTIES_FLAGS();
 MALIPUT_OSM_PROPERTIES_FLAGS();
 MALIPUT_APPLICATION_DEFINE_LOG_LEVEL_FLAG();
 
-DEFINE_string(maliput_backend, "malidrive",
-              "Whether to use <dragway>, <multilane> or <malidrive>. Default is malidrive.");
+DEFINE_string(maliput_backend, "malidrive", "Whether to use <dragway>, <multilane> or <malidrive> maliput backend.");
 
 namespace maliput {
 namespace integration {
 namespace {
+
+void GetMaliputBackendList(std::ostream* out) {
+  maliput::plugin::MaliputPluginManager manager;
+  const auto plugins = manager.ListPlugins();
+  (*out) << "Available Maliput backends: " << std::endl;
+  for (const auto& plugin : plugins) {
+    if (plugin.second == maliput::plugin::MaliputPluginType::kRoadNetworkLoader) {
+      (*out) << " - " << plugin.first << std::endl;
+    }
+  }
+}
+
+void GetMaliputBackendParameters(const std::string& backend, std::ostream* out) {
+  const auto road_network_loader = maliput::plugin::MakeRoadNetworkLoader(backend);
+  if (road_network_loader == nullptr) {
+    (*out) << "Could not load backend: " << backend << std::endl;
+    return;
+  }
+  (*out) << "Parameters for Maliput backend: " << backend << std::endl;
+
+  const auto parameters = road_network_loader->GetDefaultParameters();
+  for (const auto& parameter : parameters) {
+    (*out) << " - " << parameter.first << ": " << parameter.second << std::endl;
+  }
+}
 
 struct Command {
   std::string name{"default"};
@@ -95,6 +121,13 @@ struct Command {
 // @returns A map of command name to usage message.
 const std::map<const std::string, const Command> CommandsUsage() {
   return {
+      {"GetMaliputBackendList",
+       {"GetMaliputBackendList", "GetMaliputBackendList", {"Lists available maliput backends."}, 1}},
+      {"GetMaliputBackendParameters",
+       {"GetMaliputBackendParameters",
+        "GetMaliputBackendParameters maliput_backend_id",
+        {"Lists parameters of the selected maliput backend."},
+        2}},
       {"FindRoadPositions",
        {"FindRoadPositions",
         "FindRoadPositions x y z r",
@@ -132,6 +165,18 @@ const std::map<const std::string, const Command> CommandsUsage() {
         "ToInertialPosition lane_id s r h",
         {"Obtains the InertialPosition for an (s, r, h) LanePosition in a Lane,", "identified by lane_id."},
         5}},
+      {"GetConfluentBranches",
+       {"GetConfluentBranches",
+        "GetConfluentBranches lane_id which_end",
+        {"Obtains the LaneEndSet of confluent branches for a Lane identified by",
+         "lane_id. The which_end parameter is either 'start' or 'finish'."},
+        3}},
+      {"GetOngoingBranches",
+       {"GetOngoingBranches",
+        "GetOngoingBranches lane_id which_end",
+        {"Obtains the LaneEndSet of ongoing branches for a Lane identified by",
+         "lane_id. The which_end parameter is either 'start' or 'finish'."},
+        3}},
       {"GetMaxSpeedLimit",
        {"GetMaxSpeedLimit",
         "GetMaxSpeedLimit lane_id",
@@ -422,6 +467,52 @@ class RoadNetworkQuery {
     (*out_) << "              : Result: lane_pos:" << lane_position_result.lane_position
             << ", nearest_pos: " << lane_position_result.nearest_position
             << ", with distance: " << lane_position_result.distance << std::endl;
+    const std::chrono::duration<double> duration = (end - start);
+    PrintQueryTime(duration.count());
+  }
+
+  /// Redirects to `lane_id`'s Lane::GetConfluentBranches().
+  void GetConfluentBranches(const maliput::api::LaneId& lane_id, const maliput::api::LaneEnd::Which& which) {
+    const maliput::api::Lane* lane = rn_->road_geometry()->ById().GetLane(lane_id);
+    if (lane == nullptr) {
+      (*out_) << "              : Result: Could not find lane. " << std::endl;
+      return;
+    }
+
+    const auto start = std::chrono::high_resolution_clock::now();
+    const maliput::api::LaneEndSet* lane_end_set = lane->GetConfluentBranches(which);
+    const auto end = std::chrono::high_resolution_clock::now();
+    MALIPUT_THROW_UNLESS(lane_end_set != nullptr);
+
+    (*out_) << "(" << lane_id.string() << ")->GetConfluentBranches(which: " << which << ")" << std::endl;
+    for (int idx{}; idx < lane_end_set->size(); ++idx) {
+      const maliput::api::LaneEnd& lane_end = lane_end_set->get(idx);
+      (*out_) << "              : lane_end_" << std::to_string(idx) << ": lane id: " << lane_end.lane->id()
+              << " which end: " << lane_end.end << std::endl;
+    }
+    const std::chrono::duration<double> duration = (end - start);
+    PrintQueryTime(duration.count());
+  }
+
+  /// Redirects to `lane_id`'s Lane::GetOngoingBranches().
+  void GetOngoingBranches(const maliput::api::LaneId& lane_id, const maliput::api::LaneEnd::Which& which) {
+    const maliput::api::Lane* lane = rn_->road_geometry()->ById().GetLane(lane_id);
+    if (lane == nullptr) {
+      (*out_) << "              : Result: Could not find lane. " << std::endl;
+      return;
+    }
+
+    const auto start = std::chrono::high_resolution_clock::now();
+    const maliput::api::LaneEndSet* lane_end_set = lane->GetOngoingBranches(which);
+    const auto end = std::chrono::high_resolution_clock::now();
+    MALIPUT_THROW_UNLESS(lane_end_set != nullptr);
+
+    (*out_) << "(" << lane_id.string() << ")->GetOngoingBranches(which: " << which << ")" << std::endl;
+    for (int idx{}; idx < lane_end_set->size(); ++idx) {
+      const maliput::api::LaneEnd& lane_end = lane_end_set->get(idx);
+      (*out_) << "              : lane_end_" << std::to_string(idx) << ": lane id: " << lane_end.lane->id()
+              << " which end: " << lane_end.end << std::endl;
+    }
     const std::chrono::duration<double> duration = (end - start);
     PrintQueryTime(duration.count());
   }
@@ -930,6 +1021,23 @@ maliput::api::InertialPosition InertialPositionFromCLI(char** argv) {
   return maliput::api::InertialPosition(x, y, z);
 }
 
+/// @return A LaneEnd::Which whose string representation is `*argv`.
+///
+/// @pre `argv` is not nullptr.
+/// @warning This function will abort if preconditions are not met.
+maliput::api::LaneEnd::Which LaneEndWhichFromCLI(char** argv) {
+  MALIPUT_DEMAND(argv != nullptr);
+  const std::string which(*argv);
+  if (which == "start") {
+    return maliput::api::LaneEnd::kStart;
+  } else if (which == "finish") {
+    return maliput::api::LaneEnd::kFinish;
+  } else {
+    maliput::log()->error("Invalid LaneEnd::Which: {}\nRun 'maliput_query --help' for help.\n", which);
+    std::exit(1);
+  }
+}
+
 /// @return A radius whose string representation is `*argv`.
 /// @pre `argv` is not nullptr.
 /// @throws maliput::common::assertion_error When the represented number
@@ -975,6 +1083,17 @@ int Main(int argc, char* argv[]) {
 
   maliput::common::set_log_level(FLAGS_log_level);
 
+  // Commands that not require a road network.
+  if (command.name.compare("GetMaliputBackendList") == 0) {
+    GetMaliputBackendList(&std::cout);
+    return 0;
+  } else if (command.name.compare("GetMaliputBackendParameters") == 0) {
+    const std::string backend_name = argv[2];
+    GetMaliputBackendParameters(backend_name, &std::cout);
+    return 0;
+  }
+
+  // Loads a road network.
   log()->info("Loading road network using {} backend implementation...", FLAGS_maliput_backend);
   const MaliputImplementation maliput_implementation{StringToMaliputImplementation(FLAGS_maliput_backend)};
   auto rn = LoadRoadNetwork(
@@ -993,6 +1112,7 @@ int Main(int argc, char* argv[]) {
   auto rn_ptr = rn.get();
   RoadNetworkQuery query(&std::cout, const_cast<maliput::api::RoadNetwork*>(rn_ptr));
 
+  // Commands that require a road network.
   if (command.name.compare("FindRoadPositions") == 0) {
     const maliput::api::InertialPosition inertial_position = InertialPositionFromCLI(&(argv[2]));
     const double radius = RadiusFromCLI(&(argv[5]));
@@ -1022,6 +1142,16 @@ int Main(int argc, char* argv[]) {
     const maliput::api::LanePosition lane_position = LanePositionFromCLI(&(argv[3]));
 
     query.ToInertialPosition(lane_id, lane_position);
+  } else if (command.name.compare("GetConfluentBranches") == 0) {
+    const maliput::api::LaneId lane_id = LaneIdFromCLI(&(argv[2]));
+    const maliput::api::LaneEnd::Which which = LaneEndWhichFromCLI(&(argv[3]));
+
+    query.GetConfluentBranches(lane_id, which);
+  } else if (command.name.compare("GetOngoingBranches") == 0) {
+    const maliput::api::LaneId lane_id = LaneIdFromCLI(&(argv[2]));
+    const maliput::api::LaneEnd::Which which = LaneEndWhichFromCLI(&(argv[3]));
+
+    query.GetOngoingBranches(lane_id, which);
   } else if (command.name.compare("GetMaxSpeedLimit") == 0) {
     const maliput::api::LaneId lane_id = LaneIdFromCLI(&(argv[2]));
 
