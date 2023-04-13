@@ -1,3 +1,26 @@
+## maliput_integration (foxy) - 0.1.6-1
+
+The packages in the `maliput_integration` repository were released into the `foxy` distro by running `/usr/bin/bloom-release maliput_integration --ros-distro foxy` on `Thu, 13 Apr 2023 19:19:20 -0000`
+
+The `maliput_integration` package was released.
+
+Version of package(s) in repository `maliput_integration`:
+
+- upstream repository: https://github.com/maliput/maliput_integration.git
+- release repository: https://github.com/ros2-gbp/maliput_integration-release.git
+- rosdistro version: `0.1.5-1`
+- old version: `0.1.5-1`
+- new version: `0.1.6-1`
+
+Versions of tools used:
+
+- bloom version: `0.11.2`
+- catkin_pkg version: `0.5.2`
+- rosdep version: `0.22.2`
+- rosdistro version: `0.9.0`
+- vcstools version: `0.1.42`
+
+
 ## maliput_integration (foxy) - 0.1.5-1
 
 The packages in the `maliput_integration` repository were released into the `foxy` distro by running `/usr/bin/bloom-release maliput_integration --ros-distro foxy` on `Wed, 15 Feb 2023 14:34:25 -0000`
